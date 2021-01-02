@@ -1,0 +1,8 @@
+pandas~=0.25.1
+joblib~=0.15.0
+numpy~=1.18.5
+google-cloud-storage~=1.29.0
+gcsfs
+fsspec
+sklearn
+xgboost
