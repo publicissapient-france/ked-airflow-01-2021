@@ -2,32 +2,52 @@ from airflow import models
 import datetime as dt
 from airflow.contrib.operators.gcp_container_operator import GKEPodOperator
 
+#################################
+## TODO : change here
+
+# my_user should be the output of
+# echo $USER
+# in google cloud shell
+my_user   = XXXX
+
+# if the convention has been followed
+# there is nothing to change here
+my_bucket = my_user + '-ked-airflow-01-2021'
+
+# you need to get the GKE cluster for your composer
+# available at https://console.cloud.google.com/kubernetes/list?cloudshell=true&project=ked-airflow-01-2021
+# it should be something like 'europe-west1-user-XXXX-gke'
+my_cluster_name = 'europe-west1-' + my_user + '-' + XXXX + '-gke'
+
+# verify the location of your GKE cluster
+# if it does not match, a credential error will be raised when launching the tasks
+my_location = 'europe-west1-d'
+#################################
+
 default_args = {
     'owner': 'airflow',
     'start_date': dt.datetime(2020, 11, 16),
     'concurrency': 1,
-    'retries': 3,
-    'depends_on_past': False,
-    'retry_delay': dt.timedelta(minutes=10)
+    'depends_on_past': False
 }
 
 
 def get_image(step_name):
-    images = {'preprocess': 'gcr.io/daria66414/preprocess_titanic@sha256:4527826396b584b603d7bcdb49db6effeef109b16e340da4fb1f82b420b56020',
-              'train': 'gcr.io/daria66414/train_titanic@sha256:e3e9836ca3ad5c66e64eed9f3d4205f51b5d4ad7f1748a9de6bb9eed153d97e9',
-              'predict': 'gcr.io/daria66414/predict_titanic@sha256:5f88ab44f65e1cebc20d39500d7f96e9786b73b3ea0e068614776341de65b8fe'}
+    images = {
+        'preprocess': 'gcr.io/ked-airflow-01-2021/preprocess_titanic:latest',
+        'train'     : 'gcr.io/ked-airflow-01-2021/train_titanic:latest',
+        'predict'   : 'gcr.io/ked-airflow-01-2021/predict_titanic:latest'
+    }
     return images[step_name]
 
 
 def get_ds_step_pod(step_name):
-    # ToDo dag_args = Your code here
-    dag_args = ['darias-titanic-data-bucket']
-    return GKEPodOperator(project_id='daria66414',
-                          location='europe-west1-b',
-                          cluster_name='europe-west1-darias-compose-226602bd-gke',
+    dag_args = [my_bucket]
+    return GKEPodOperator(project_id='ked-airflow-01-2021',
+                          location=my_location,
+                          cluster_name=my_cluster_name,
                           namespace='default',
                           task_id=step_name + '_' + 'titanic',
-                          retries=3,
                           image=get_image(step_name),
                           name=step_name.replace('_', '-') + '-' + 'titanic',
                           task_concurrency=1,
@@ -38,14 +58,13 @@ def get_ds_step_pod(step_name):
                           )
 
 
-with models.DAG(
-       # ToDo: change name to something like "[my_name]_titanic_ked_dag"
-        'simple_titanic',
+with models.DAG('simple_titanic',
         default_args=default_args,
         max_active_runs=1,
         schedule_interval=None) as dag:
+
     prepare_data = get_ds_step_pod('preprocess')
-    train = get_ds_step_pod('train')
-    predict = get_ds_step_pod('predict')
+    train        = get_ds_step_pod('train')
+    predict      = get_ds_step_pod('predict')
 
     prepare_data >> train >> predict
