@@ -64,8 +64,8 @@ with models.DAG('simple_titanic',
         max_active_runs=1,
         schedule_interval=None) as dag:
 
-    prepare_data = get_ds_step_pod('preprocess')
+    preprocess   = get_ds_step_pod('preprocess')
     train        = get_ds_step_pod('train')
     predict      = get_ds_step_pod('predict')
 
-    prepare_data >> train >> predict
+    preprocess >> train >> predict
