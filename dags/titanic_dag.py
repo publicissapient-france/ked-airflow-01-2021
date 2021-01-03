@@ -44,6 +44,7 @@ def get_image(step_name):
 def get_ds_step_pod(step_name):
     dag_args = [my_bucket]
     return GKEPodOperator(project_id='ked-airflow-01-2021',
+                          startup_timeout_seconds=600,
                           location=my_location,
                           cluster_name=my_cluster_name,
                           namespace='default',
